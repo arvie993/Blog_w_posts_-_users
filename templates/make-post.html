@@ -1,0 +1,151 @@
+{% from "bootstrap5/form.html" import render_form %} {% block content %} {%
+include "header.html" %}
+
+<!-- Page Header -->
+<header
+  class="masthead"
+  style="background-image: url('../static/assets/img/edit-bg.jpg')"
+>
+  <div class="container position-relative px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+      <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="page-heading">
+          {% if is_edit %}
+          <h1>Edit Post</h1>
+          {% else %}
+          <h1>New Post</h1>
+          {% endif %}
+          <span class="subheading"
+            >You're going to make a great blog post!</span
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="mb-4">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-md-10 mx-auto">
+        <script src="https://cdn.ckeditor.com/4.25.1-lts/standard/ckeditor.js"></script>
+        {{ ckeditor.config(name='body') }}
+        <form id="postForm" method="POST" action="{% if is_edit %}{{ url_for('edit_post', post_id=post_id) }}{% else %}{{ url_for('add_new_post') }}{% endif %}">
+          {{ form.csrf_token }}
+          <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.subtitle.label(class="form-label") }}
+            {{ form.subtitle(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.img_url.label(class="form-label") }}
+            {{ form.img_url(class="form-control") }}
+          </div>
+          <div class="mb-3">
+            {{ form.body.label(class="form-label") }}
+            {{ form.body(class="form-control ckeditor") }}
+          </div>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <span id="submitText">{% if is_edit %}Update Post{% else %}Submit Post{% endif %}</span>
+            <span id="submitSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Toast notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+  <div id="postToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage">
+        Post saved successfully!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('postForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitText = document.getElementById('submitText');
+  const submitSpinner = document.getElementById('submitSpinner');
+  const toast = document.getElementById('postToast');
+  const toastMessage = document.getElementById('toastMessage');
+  
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Update CKEditor content before submission
+    if (typeof CKEDITOR !== 'undefined') {
+      for (var instance in CKEDITOR.instances) {
+        CKEDITOR.instances[instance].updateElement();
+      }
+    }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitText.textContent = 'Saving...';
+    submitSpinner.classList.remove('d-none');
+    
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success toast
+        toast.classList.remove('bg-danger');
+        toast.classList.add('bg-success');
+        toastMessage.textContent = data.message;
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Redirect after a short delay
+        setTimeout(() => {
+          window.location.href = data.redirect;
+        }, 1000);
+      } else {
+        // Show error toast
+        toast.classList.remove('bg-success');
+        toast.classList.add('bg-danger');
+        toastMessage.textContent = data.error || 'An error occurred.';
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Reset button
+        submitBtn.disabled = false;
+        submitText.textContent = '{% if is_edit %}Update Post{% else %}Submit Post{% endif %}';
+        submitSpinner.classList.add('d-none');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      toast.classList.remove('bg-success');
+      toast.classList.add('bg-danger');
+      toastMessage.textContent = 'An error occurred. Please try again.';
+      const bsToast = new bootstrap.Toast(toast);
+      bsToast.show();
+      
+      // Reset button
+      submitBtn.disabled = false;
+      submitText.textContent = '{% if is_edit %}Update Post{% else %}Submit Post{% endif %}';
+      submitSpinner.classList.add('d-none');
+    });
+  });
+});
+</script>
+
+{% include "footer.html" %} {% endblock %}
