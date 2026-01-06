@@ -79,9 +79,7 @@ class Base(DeclarativeBase):
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///posts.db')
 # Render uses postgres:// but SQLAlchemy needs postgresql://
 if db_url.startswith('postgres://'):
-    db_url = db_url.replace('postgres://', 'postgresql+psycopg://', 1)
-elif db_url.startswith('postgresql://'):
-    db_url = db_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 db = SQLAlchemy(model_class=Base)
